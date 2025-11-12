@@ -1,0 +1,8 @@
+webhook url: https://discordapp.com/api/webhooks/1437571782662946929/2mCIQ4kXl4NPuRE6yJze_psUPn40thO5NW-MQS_lKUvKXieQMP4AigKJYhtO6n9b25QI
+pip install telethon requests python-dotenv
+
+venv\Scripts\activate
+python tg_to_discord_solana.py
+
+venv\Scripts\activate
+python tg_to_discord_gold.py
