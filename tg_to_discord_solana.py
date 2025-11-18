@@ -25,17 +25,41 @@ if os.path.exists(PERSIST_FILE):
 else:
     sent_messages = []
 
+
 async def send_to_discord(message_text):
     """Trimite mesajul către Discord prin webhook."""
     payload = {"content": message_text}
     try:
         response = requests.post(DISCORD_WEBHOOK, json=payload)
-        if response.status_code == 204:
+        if response.status_code in (200, 204):
             print("✅ Mesaj trimis pe Discord.")
         else:
             print(f"⚠️ Eroare la trimitere ({response.status_code}): {response.text}")
     except Exception as e:
         print(f"❌ Eroare de rețea: {e}")
+
+
+def is_token_alert(text: str) -> bool:
+    """
+    Filtrare strictă pentru mesajele de tip:
+    Token name:
+    Ticker:
+    Liquidity:
+    CA:
+    """
+    if not text:
+        return False
+
+    required_lines = [
+        "Token name:",
+        "Ticker:",
+        "Liquidity:",
+        "CA:",
+    ]
+
+    # Verificăm dacă fiecare parte necesară apare în mesaj
+    return all(line in text for line in required_lines)
+
 
 @client.on(events.NewMessage(chats=TELEGRAM_CHAT))
 async def handler(event):
@@ -46,24 +70,22 @@ async def handler(event):
 
     text = event.message.message or ""
 
-    if FORWARD_FILTER == "text" and not text:
+    # -----------------------------
+    # 🔥 FILTRARE SPECIALĂ
+    # -----------------------------
+    if not is_token_alert(text):
+        print("⏭ Mesaj ignorat (nu este tip Token Alert).")
         return
-    if FORWARD_FILTER == "media" and not event.message.media:
-        return
+    # -----------------------------
 
-    # Creează textul de trimis
-    if text:
-        to_send = text
-    else:
-        to_send = "[Media / fișier primit]"
-
-    print(f"➡️ {to_send[:60]}...")
-    await send_to_discord(to_send)
+    print(f"➡️ Mesaj aprobat: {text[:60]}...")
+    await send_to_discord(text)
 
     # Salvează ID-ul mesajului trimis
     sent_messages.append(msg_id)
     with open(PERSIST_FILE, "w") as f:
         json.dump(sent_messages, f)
+
 
 async def main():
     print("🔹 Conectare la Telegram...")
@@ -72,6 +94,7 @@ async def main():
     print(f"✅ Conectat ca {me.username or me.first_name}")
     print(f"📡 Ascult mesajele din {TELEGRAM_CHAT}...")
     await client.run_until_disconnected()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
